@@ -10,12 +10,16 @@ class Wallet:
     Keeps track of the miner's balance.
     Allows a miner to authorize transactions.
     """
-    def __init__(self):
+    def __init__(self, blockchain=None):
+        self.blockchain = blockchain
         self.address = str(uuid.uuid4())[0:8]
-        self.balance = STARTING_BALANCE
         self.private_key = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
         self.public_key = self.private_key.get_verifying_key()
         self.serialize_public_key()
+
+    @property
+    def balance(self):
+            return Wallet.calculate_balance(self.blockchain, self.address)
 
     def sign(self, data):
         """
@@ -39,6 +43,26 @@ class Wallet:
             return verifying_key.verify(bytes.fromhex(signature_hex), json.dumps(data).encode('utf-8'), hashfunc=hashlib.sha256)
         except ecdsa.BadSignatureError:
             return False
+        
+
+    @staticmethod
+    def calculate_balance(blockchain, address):
+        """
+        Adds the output values that belong to the address from the most recent
+        """
+        balance = STARTING_BALANCE
+
+        if not blockchain:
+            return balance
+
+        for block in blockchain.chain:
+            for transaction in block.data:
+                if transaction['input']['address'] == address:
+                    balance = transaction['output'][address]
+                elif address in transaction['output']:
+                    balance += transaction['output'][address]
+
+        return balance
 
 def main():
     wallet = Wallet()

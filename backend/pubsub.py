@@ -29,6 +29,7 @@ class Listener(SubscribeCallback):
             pot_chain.append(block)
             try:
                 self.blockchain.replace_chain(pot_chain)
+                self.transaction_pool.clear_blockchain_transactions(self.blockchain)
                 print('\n--Succesfully replaced chain')
             except Exception as e:
                 print(f'\n-- Did not replace chain: {e}')
