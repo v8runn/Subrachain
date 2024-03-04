@@ -5,10 +5,6 @@ from backend.wallet.wallet import Wallet
 from backend.config import MINING_REWARD, MINING_REWARD_INPUT
 
 class Transaction:
-    """
-    Document of an exchange in currency from a sender to one
-    or more recipients.
-    """
     def __init__(
         self,
         sender_wallet=None,
@@ -27,9 +23,6 @@ class Transaction:
         self.input = input or self.create_input(sender_wallet, self.output)
 
     def create_output(self, sender_wallet, recipient, amount):
-        """
-        Structure the output data for the transaction.
-        """
         if amount > sender_wallet.balance:
             raise Exception('Amount exceeds balance')
 
@@ -40,10 +33,6 @@ class Transaction:
         return output
 
     def create_input(self, sender_wallet, output):
-        """
-        Structure the input data for the transaction.
-        Sign the transaction and include the sender's public key and address
-        """
         return {
             'timestamp': time.time_ns(),
             'amount': sender_wallet.balance,
@@ -53,9 +42,6 @@ class Transaction:
         }
 
     def update(self, sender_wallet, recipient, amount):
-        """
-        Update the transaction with an existing or new recipient.
-        """
         if amount > self.output[sender_wallet.address]:
             raise Exception('Amount exceeds balance')
 
@@ -64,31 +50,19 @@ class Transaction:
         else:
             self.output[recipient] = amount
 
-        self.output[sender_wallet.address] = \
-            self.output[sender_wallet.address] - amount
+        self.output[sender_wallet.address] = self.output[sender_wallet.address] - amount
 
         self.input = self.create_input(sender_wallet, self.output)
 
     def to_json(self):
-        """
-        Serialize the transaction.
-        """
         return self.__dict__
 
     @staticmethod
     def from_json(transaction_json):
-        """
-        Deserialize a transaction's json representation back into a
-        Transaction instance
-        """
         return Transaction(**transaction_json)
 
     @staticmethod
     def is_valid_transaction(transaction):
-        """
-        Validate a transaction.
-        Raise an exception for invalid transactions.
-        """
 
         if transaction.input == MINING_REWARD_INPUT:
             if list(transaction.output.values()) != [MINING_REWARD]:

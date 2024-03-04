@@ -5,11 +5,6 @@ import hashlib
 from backend.config import STARTING_BALANCE
 
 class Wallet:
-    """
-    An individual wallet for a miner.
-    Keeps track of the miner's balance.
-    Allows a miner to authorize transactions.
-    """
     def __init__(self, blockchain=None):
         self.blockchain = blockchain
         self.address = str(uuid.uuid4())[0:8]
@@ -22,22 +17,13 @@ class Wallet:
             return Wallet.calculate_balance(self.blockchain, self.address)
 
     def sign(self, data):
-        """
-        Generate a signature based on the data using the local private key.
-        """
         return self.private_key.sign(json.dumps(data).encode('utf-8'), hashfunc=hashlib.sha256).hex()
 
     def serialize_public_key(self):
-        """
-        Reset the public key to its serialized version.
-        """
         self.public_key = self.public_key.to_pem().decode('utf-8')
 
     @staticmethod
     def verify(public_key_pem, data, signature_hex):
-        """
-        Verify a signature based on the original public key and data.
-        """
         try:
             verifying_key = ecdsa.VerifyingKey.from_pem(public_key_pem)
             return verifying_key.verify(bytes.fromhex(signature_hex), json.dumps(data).encode('utf-8'), hashfunc=hashlib.sha256)
@@ -47,9 +33,6 @@ class Wallet:
 
     @staticmethod
     def calculate_balance(blockchain, address):
-        """
-        Adds the output values that belong to the address from the most recent
-        """
         balance = STARTING_BALANCE
 
         if not blockchain:

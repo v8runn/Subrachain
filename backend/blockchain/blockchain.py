@@ -4,10 +4,6 @@ from backend.config import MINING_REWARD_INPUT
 from backend.wallet.wallet import Wallet
 
 class Blockchain:
-    """
-    Blockchain: a public ledger of transactions.
-    Implemented as a list of blocks - data sets of transactions
-    """
     def __init__(self):
         self.chain = [Block.genesis()]
 
@@ -18,33 +14,21 @@ class Blockchain:
         return f'Blockchain: {self.chain}'
 
     def replace_chain(self, chain):
-        """
-        Replace the local chain with the incoming one if the following applies:
-          - The incoming chain is longer than the local one.
-          - The incoming chain is formatted properly.
-        """
         if len(chain) <= len(self.chain):
-            raise Exception('Cannot replace. The incoming chain must be longer.')
+            raise Exception('Cannot replace, the incoming chain must be longer.')
 
         try:
             Blockchain.is_valid_chain(chain)
         except Exception as e:
-            raise Exception(f'Cannot replace. The incoming chain is invalid: {e}')
+            raise Exception(f'Cannot replace, the incoming chain is invalid: {e}')
 
         self.chain = chain
 
     def to_json(self):
-        """
-        Serialize the blockchain into a list of blocks.
-        """
         return list(map(lambda block: block.to_json(), self.chain))
 
     @staticmethod
     def from_json(chain_json):
-        """
-        Deserialize a list of serialized blocks into a Blokchain instance.
-        The result will contain a chain list of Block instances.
-        """
         blockchain = Blockchain()
         blockchain.chain = list(
             map(lambda block_json: Block.from_json(block_json), chain_json)
@@ -54,12 +38,6 @@ class Blockchain:
 
     @staticmethod
     def is_valid_chain(chain):
-        """
-        Validate the incoming chain.
-        Enforce the following rules of the blockchain:
-          - the chain must start with the genesis block
-          - blocks must be formatted correctly
-        """
         if chain[0] != Block.genesis():
             raise Exception('The genesis block must be valid')
 
@@ -72,11 +50,6 @@ class Blockchain:
 
     @staticmethod
     def is_valid_transaction_chain(chain):
-        """
-        - Each transaction appears once
-        - One mining reward per block
-        - Each transaction must be valid
-        """
         transaction_ids = set()
 
         for i in range(len(chain)):

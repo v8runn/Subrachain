@@ -41,10 +41,6 @@ class Listener(SubscribeCallback):
             
 
 class PubSub():
-    """
-    Handles the pub/sub layer of application
-    Provides communication between nodes of the blockchain network
-    """
     def __init__(self, blockchain, transcation_pool):
         self.pubnub = PubNub(pnconfig)
         self.pubnub.subscribe().channels(CHANNELS.values()).execute()
@@ -56,21 +52,15 @@ class PubSub():
         self.pubnub.subscribe().channels([channel]).execute()
 
     def broadcast_block(self, block):
-        """
-        Broadcast a block object to all nodes
-        """
         self.publish(CHANNELS['BLOCK'], block.to_json())
     
     def broadcast_transaction(self, transaction):
-        """
-        Broadcast transaction to all nodes
-        """
         self.publish(CHANNELS['TRANSACTION'], transaction.to_json())
 
 def main():
     pubsub = PubSub()
     time.sleep(1)
-    pubsub.publish(CHANNELS['TEST'], {'foo': 'bar'})
+    pubsub.publish(CHANNELS['TEST'], {'testing': 'block'})
 
 if __name__ == '__main__':
     main()

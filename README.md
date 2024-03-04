@@ -1,3 +1,7 @@
+**Subrachain**
+
+- A blockchain-based cryptocurrency.
+
 **Activate the virtual environment**
 
 ```
@@ -24,4 +28,15 @@ python -m backend.app
 Activate the virtual environment.
 ```
 export PEER=True && python -m backend.app
+```
+
+**Run frontend**
+```
+npm start
+```
+
+**Provide dummy data for frontend**
+Activate the virtual environment
+```
+export SEED_DATA=True && python -m backend.app
 ```
