@@ -177,6 +177,7 @@ def initialize():
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         pass
 
+initialize()
 PORT = 5000
 
 if os.environ.get('PEER') == 'True':
@@ -194,5 +195,4 @@ if os.environ.get('SEED_DATA') == 'True':
             Transaction(Wallet(), Wallet().address, random.randint(2, 50))
         )
 
-initialize()
 app.run(port=PORT)

@@ -34,6 +34,7 @@ function App() {
       <div>
             <div><b>Wallet Address:</b> {address}</div>
             <div><b>Your Current Wallet Balance:</b> {balance} SBC</div>
+            <h5><i>*If you're a new user, please note down your wallet address, as you will need this when you log in to the application next</i></h5>
             </div>
     </div>
   );
