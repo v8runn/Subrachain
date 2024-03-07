@@ -1,6 +1,6 @@
 **Subrachain**
 
-- A blockchain-based cryptocurrency.
+- Welcome to Subrachain! A blockchain-based cryptocurrency inspired by the philosophies of Bitcoin and Solana.
 
 **Activate the virtual environment**
 
