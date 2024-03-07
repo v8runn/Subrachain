@@ -1,6 +1,11 @@
 import os
 import requests
 import random
+from Crypto.Cipher import AES  
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad, unpad
+import json
+import os
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -11,12 +16,68 @@ from backend.wallet.transaction import Transaction
 from backend.wallet.transaction_pool import TransactionPool
 from backend.pubsub import PubSub
 
+
 app = Flask(__name__)
 CORS(app, resources={ r'/*': {'origins': 'http://localhost:3000'}})
-blockchain = Blockchain()
-wallet = Wallet(blockchain)
-transaction_pool = TransactionPool()
-pubsub = PubSub(blockchain, transaction_pool)
+blockchain = None
+wallet = None
+transaction_pool = None
+pubsub = None
+
+def encrypt_data(data, key):
+    cipher = AES.new(key, AES.MODE_ECB)
+    ct_bytes = cipher.encrypt(pad(data.encode(), AES.block_size))
+    return ct_bytes
+
+def decrypt_data(encrypted_data, key):
+    cipher = AES.new(key, AES.MODE_ECB)
+    pt = unpad(cipher.decrypt(encrypted_data), AES.block_size)
+    return pt.decode()
+
+def load_data():
+    blockchain_file_name = 'blockchain_data' + wallet_address + '.bin'
+    transaction_pool_file_name = 'transaction_pool_data' + wallet_address + '.bin'
+    key_file_name = 'key' + wallet_address + '.bin'
+    try:
+        with open(blockchain_file_name, 'rb') as file:
+            encrypted_blockchain = file.read()
+        with open(transaction_pool_file_name, 'rb') as file:
+            encrypted_transaction_pool = file.read()
+        
+        with open(key_file_name, 'rb') as file:
+            key = file.read()
+
+        blockchain_data = decrypt_data(encrypted_blockchain, key)
+        transaction_pool_data = decrypt_data(encrypted_transaction_pool, key)
+
+        blockchain = Blockchain.from_json(json.loads(blockchain_data))
+        transaction_pool = json.loads(transaction_pool_data)
+
+        return blockchain, transaction_pool
+    except FileNotFoundError:
+        return Blockchain(), TransactionPool()
+
+def save_data(blockchain, transaction_pool):
+    blockchain_file_name = 'blockchain_data' + wallet_address + '.bin'
+    transaction_pool_file_name = 'transaction_pool_data' + wallet_address + '.bin'
+    key_file_name = 'key' + wallet_address + '.bin'
+
+    key = get_random_bytes(16)
+    with open(key_file_name, 'wb') as file:
+        file.write(key)
+
+    encrypted_blockchain = encrypt_data(json.dumps(blockchain.to_json()), key)
+    encrypted_transaction_pool = encrypt_data(json.dumps(transaction_pool.transaction_data()), key)
+
+    with open(blockchain_file_name, 'wb') as file:
+        file.write(encrypted_blockchain)
+    with open(transaction_pool_file_name, 'wb') as file:
+        file.write(encrypted_transaction_pool)
+
+def initialize_wallet_with_address(address):
+    new_wallet = Wallet(blockchain)
+    new_wallet.address = address
+    return new_wallet
 
 @app.route('/')
 def route_default():
@@ -46,6 +107,7 @@ def route_blockchain_mine():
     block = blockchain.chain[-1]
     pubsub.broadcast_block(block)
     transaction_pool.clear_blockchain_transactions(blockchain)
+    save_data(blockchain, transaction_pool)
 
     return jsonify(block.to_json())
 
@@ -69,6 +131,7 @@ def route_wallet_transact():
 
     pubsub.broadcast_transaction(transaction)
     transaction_pool.set_transaction(transaction)
+    save_data(blockchain, transaction_pool)
 
     return jsonify(transaction.to_json())
 
@@ -90,20 +153,34 @@ def route_known_addresses():
 def route_transactions():
     return jsonify(transaction_pool.transaction_data())
 
-ROOT_PORT = 5000
-PORT = ROOT_PORT
+def initialize():
+    global wallet, blockchain, transaction_pool, pubsub, wallet_address
+    blockchain = Blockchain()
+    transaction_pool = TransactionPool()
+    pubsub = PubSub(blockchain, transaction_pool)
+
+    wallet_address = os.environ.get('WALLET_ADDRESS')
+    if wallet_address:
+        wallet = initialize_wallet_with_address(wallet_address)
+    else:
+        wallet = Wallet(blockchain)
+        wallet_address = wallet.get_address()
+        
+    try:
+        if not load_data():
+            print("No existing data found, starting new node")
+            pubsub.broadcast_state_request()
+            save_data(blockchain, transaction_pool)
+        else:
+            pubsub.broadcast_state_request()
+            save_data(blockchain, transaction_pool)
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        pass
+
+PORT = 5000
 
 if os.environ.get('PEER') == 'True':
-    PORT = random.randint(5001, 6000)
-
-    result = requests.get(f'http://localhost:{ROOT_PORT}/blockchain')
-    result_blockchain = Blockchain.from_json(result.json())
-
-    try:
-        blockchain.replace_chain(result_blockchain.chain)
-        print('\n -- Successfully synchronized the local chain')
-    except Exception as e:
-        print(f'\n -- Error synchronizing: {e}')
+    PORT = random.randint(5001, 6000) 
 
 if os.environ.get('SEED_DATA') == 'True':
     for i in range(10):
@@ -117,4 +194,5 @@ if os.environ.get('SEED_DATA') == 'True':
             Transaction(Wallet(), Wallet().address, random.randint(2, 50))
         )
 
+initialize()
 app.run(port=PORT)

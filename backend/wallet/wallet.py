@@ -5,9 +5,9 @@ import hashlib
 from backend.config import STARTING_BALANCE
 
 class Wallet:
-    def __init__(self, blockchain=None):
+    def __init__(self, blockchain=None, address=None):
         self.blockchain = blockchain
-        self.address = str(uuid.uuid4())[0:8]
+        self.address = address or str(uuid.uuid4())[0:8]
         self.private_key = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
         self.public_key = self.private_key.get_verifying_key()
         self.serialize_public_key()
@@ -21,6 +21,9 @@ class Wallet:
 
     def serialize_public_key(self):
         self.public_key = self.public_key.to_pem().decode('utf-8')
+    
+    def get_address(self):
+        return self.address
 
     @staticmethod
     def verify(public_key_pem, data, signature_hex):
