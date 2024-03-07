@@ -40,3 +40,8 @@ Activate the virtual environment
 ```
 export SEED_DATA=True && python -m backend.app
 ```
+
+**When running wallet again**
+```
+export WALLET_ADDRESS=<your_wallet_address> && python -m backend.app
+```
