@@ -3,6 +3,7 @@ import time
 from backend.util.crypto_hash import crypto_hash
 from backend.util.hex_to_binary import hex_to_binary
 from backend.config import MINE_RATE
+from backend.util.poh import compute_vdf, verify_vdf
 
 GENESIS_DATA = {
     'timestamp': 1,
@@ -10,17 +11,23 @@ GENESIS_DATA = {
     'hash': 'genesis_hash',
     'data': [],
     'difficulty': 8,
-    'nonce': 'genesis_nonce'
+    'nonce': 'genesis_nonce',
+    'poh_record': 0,
+    'vdf_output': 0,
+    'vdf_params': ['genesis_pi', 'genesis_g', 'genesis_N']
 }
 
 class Block:
-    def __init__(self, timestamp, last_hash, hash, data, difficulty, nonce):
+    def __init__(self, timestamp, last_hash, hash, data, difficulty, nonce, poh_record, vdf_output, vdf_params):
         self.timestamp = timestamp
         self.last_hash = last_hash
         self.hash = hash
         self.data = data
         self.difficulty = difficulty
         self.nonce = nonce
+        self.poh_record = poh_record
+        self.vdf_output = vdf_output
+        self.vdf_params = vdf_params
 
     def __repr__(self):
         return (
@@ -30,7 +37,10 @@ class Block:
             f'hash: {self.hash}, '
             f'data: {self.data}, '
             f'difficulty: {self.difficulty}, '
-            f'nonce: {self.nonce})'
+            f'nonce: {self.nonce},)'
+            f'poh_record: {self.poh_record},)'
+            f'vdf_output {self.vdf_output},)'
+            f'vdf_params: {self.vdf_params})'
         )
 
     def __eq__(self, other):
@@ -45,15 +55,19 @@ class Block:
         last_hash = last_block.hash
         difficulty = Block.adjust_difficulty(last_block, timestamp)
         nonce = 0
-        hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce)
+        poh_record = last_block.poh_record + 1
+
+        vdf_input = f'{last_hash}{timestamp}{poh_record}'
+        vdf_output, vdf_params = compute_vdf(vdf_input, 10)
+        hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce, poh_record, vdf_output, vdf_params)
 
         while hex_to_binary(hash)[0:difficulty] != '0' * difficulty:
             nonce += 1
             timestamp = time.time_ns()
             difficulty = Block.adjust_difficulty(last_block, timestamp)
-            hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce)
+            hash = crypto_hash(timestamp, last_hash, data, difficulty, nonce, poh_record, vdf_output, vdf_params)
 
-        return Block(timestamp, last_hash, hash, data, difficulty, nonce)
+        return Block(timestamp, last_hash, hash, data, difficulty, nonce, poh_record, vdf_output, vdf_params)
 
     @staticmethod
     def genesis():
@@ -86,13 +100,22 @@ class Block:
 
         if abs(last_block.difficulty - block.difficulty) > 1:
             raise Exception('The block difficulty is not adjusted by 1')
+        
+        if (block.poh_record - last_block.poh_record) > 1:
+            raise Exception('PoH record is incorrect')
+        
+        if not verify_vdf(block.vdf_output, block.vdf_params, 10):
+            raise Exception('Invalid VDF output')
 
         reconstructed_hash = crypto_hash(
             block.timestamp,
             block.last_hash,
             block.data,
+            block.difficulty,
             block.nonce,
-            block.difficulty
+            block.poh_record,
+            block.vdf_output,
+            block.vdf_params
         )
 
         if block.hash != reconstructed_hash:
