@@ -43,7 +43,7 @@ function ToggleTransactionDisplay({block}) {
 }
 
 export function Block({ block }) {
-    const { timestamp, hash } = block;
+    const { timestamp, hash, poh_record } = block;
     const hashDisplay = `${hash.substring(0, 15)}...`;
     const timestampDisplay = new Date(timestamp / MILLISECONDS_PY).toLocaleString();
 
@@ -51,6 +51,7 @@ export function Block({ block }) {
         <div className="Block">
             <div><b>Hash:</b> {hashDisplay}</div>
             <div><b>Timestamp:</b> {timestampDisplay}</div>
+            <div><b>Proof of History Record: {poh_record}</b></div>
             <ToggleTransactionDisplay block={block}/>
         </div>
     )
